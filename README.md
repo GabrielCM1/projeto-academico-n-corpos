@@ -7,10 +7,7 @@ O programa simula N partículas que se atraem par a par. A cada passo de tempo, 
 1. **Calcula as forças:** para cada partícula, soma a força de todas as outras. Custa O(N²) e ocupa 99,9% do tempo.
 2. **Move as partículas:** atualiza velocidade e posição de cada uma. Custa O(N).
 
-O objetivo é paralelizar o cálculo de forças de dois jeitos e comparar com a versão sequencial:
-
-- **OpenMP:** threads que dividem a mesma memória.
-- **MPI:** processos com memória separada, que trocam posições com `MPI_Allgather` a cada passo.
+O objetivo é paralelizar o cálculo de forças com **OpenMP** e comparar com a versão sequencial. No OpenMP, várias threads dividem a mesma memória: cada uma calcula as forças de um pedaço das partículas e só escreve no próprio pedaço, então não há condição de corrida.
 
 ---
 
@@ -37,19 +34,18 @@ projeto-academico-n-corpos/
 │   ├── 06_nbody.cpp            ← código do professor (NÃO ALTERAR)
 │   └── 06_nbody_comentado.cpp  ← mesma coisa, comentada para estudo
 ├── openmp/                     ← versão com threads (06_nbody_openmp.cpp)
-├── mpi/                        ← versão com processos (06_nbody_mpi.cpp)
 ├── resultados/                 ← medições em CSV
 ├── Makefile                    ← compila tudo com o comando "make"
 └── README.md                   ← este arquivo
 ```
 
-> **Regra do professor:** o `baseline/06_nbody.cpp` é a referência oficial. Não mude a lógica nem a entrada dele. As versões paralelas ficam em arquivos novos, dentro de `openmp/` e `mpi/`.
+> **Regra do professor:** o `baseline/06_nbody.cpp` é a referência oficial. Não mude a lógica nem a entrada dele. A versão paralela fica em um arquivo novo, dentro de `openmp/`.
 
 ---
 
 ## 2. Como o ambiente funciona
 
-OpenMP e MPI foram feitos para Linux. Para ninguém precisar instalar isso no Windows, o professor preparou um **contêiner**: um Linux pronto (Ubuntu 24.04 com g++, OpenMP e MPI) que roda dentro do seu Windows pelo Docker. Ele é igual para toda a turma, então os tempos medidos são comparáveis.
+O OpenMP funciona melhor no Linux. Para ninguém precisar configurar isso no Windows, o professor preparou um **contêiner**: um Linux pronto (Ubuntu 24.04 com g++ e OpenMP) que roda dentro do seu Windows pelo Docker. Ele é igual para toda a turma, então os tempos medidos são comparáveis.
 
 Três ideias para entender:
 
@@ -177,21 +173,19 @@ Sempre de dentro da pasta do projeto, no terminal do contêiner:
 
 | Comando | O que faz |
 |---|---|
-| `make` | Compila tudo (baseline, OpenMP e MPI) |
+| `make` | Compila tudo (baseline e OpenMP) |
 | `make baseline` | Compila só o baseline |
 | `make openmp` | Compila os `.cpp` da pasta `openmp/` |
-| `make mpi` | Compila os `.cpp` da pasta `mpi/` |
 | `make clean` | Apaga os executáveis gerados |
 
 O `make` só recompila o que mudou. Se quiser compilar à mão, os comandos equivalentes são:
 
 ```bash
-g++    -O2           baseline/06_nbody.cpp       -o baseline/06_nbody        # sequencial
-g++    -O2 -fopenmp  openmp/06_nbody_openmp.cpp  -o openmp/06_nbody_openmp   # OpenMP
-mpicxx -O2           mpi/06_nbody_mpi.cpp        -o mpi/06_nbody_mpi         # MPI
+g++ -O2           baseline/06_nbody.cpp       -o baseline/06_nbody        # sequencial
+g++ -O2 -fopenmp  openmp/06_nbody_openmp.cpp  -o openmp/06_nbody_openmp   # OpenMP
 ```
 
-> Código MPI se compila com `mpicxx`, não com `g++`. Com `g++` dá o erro `mpi.h: No such file or directory`.
+> Sem o `-fopenmp`, o compilador ignora os `#pragma omp` e o programa roda com uma thread só, sem dar erro.
 
 Os executáveis não vão para o GitHub, porque o `.gitignore` os ignora. Cada um compila na própria máquina.
 
@@ -220,19 +214,6 @@ Outra forma de definir o número de threads é pela variável de ambiente:
 OMP_NUM_THREADS=4 ./openmp/06_nbody_openmp 2000 10
 ```
 
-### MPI
-
-```bash
-mpirun -np 4 ./mpi/06_nbody_mpi 2000 10
-#          └─ número de processos
-```
-
-Se o `mpirun` reclamar que não há "slots" suficientes, acrescente `--oversubscribe`:
-
-```bash
-mpirun --oversubscribe -np 8 ./mpi/06_nbody_mpi 2000 10
-```
-
 ### O checksum é o teste de correção
 
 Toda versão imprime um `checksum`. Para o mesmo N e STEPS, **o checksum da versão paralela tem que ser igual ao do baseline**. Se for diferente, a paralelização tem erro, por exemplo uma condição de corrida.
@@ -250,7 +231,7 @@ Toda versão imprime um `checksum`. Para o mesmo N e STEPS, **o checksum da vers
 
 Use o mesmo protocolo do Marco 1, para os números serem comparáveis:
 
-- Rode **4 vezes** cada combinação de N e número de threads/processos.
+- Rode **4 vezes** cada combinação de N e número de threads (1, 2, 4 e 8).
 - **Descarte a 1ª** execução, que é o aquecimento de cache e sistema.
 - Reporte a **mediana** das 3 restantes.
 - Use `STEPS = 10` e N ∈ {500, 1000, 2000, 4000}.
@@ -279,7 +260,7 @@ n,steps,repeticao,tempo_s,checksum,descartada
 Para calcular speedup e eficiência:
 
 - **Speedup** = tempo do baseline ÷ tempo da versão paralela
-- **Eficiência** = speedup ÷ número de threads (ou processos)
+- **Eficiência** = speedup ÷ número de threads
 
 ---
 
@@ -300,7 +281,7 @@ git push                                   # 4. envie para o GitHub
 
 Boas práticas:
 
-- Cada um mexe na sua frente (OpenMP em `openmp/`, MPI em `mpi/`) para evitar conflitos.
+- Combinem quem mexe em qual arquivo, para evitar dois editando o mesmo trecho ao mesmo tempo.
 - Faça `git pull` antes de começar e antes de dar `push`.
 - Só faça commit de código que compila e cujo checksum bate com o do baseline.
 - Para usar o git dentro do contêiner pela primeira vez, configure seu nome e e-mail:
@@ -319,9 +300,9 @@ git config --global user.email "seu-email@exemplo.com"
 | `docker: command not found` ou erro de conexão | O Docker Desktop está fechado. Abra e espere a baleia ficar parada. |
 | Tela *"create container configuration"* | Você abriu a pasta errada no VS Code. Abra `C:\parallel_programing\ambiente_pp`. |
 | `make: *** No targets specified and no makefile found` | Você não está na pasta do projeto. Rode `cd /lab/codigos/projeto-academico-n-corpos`. |
-| `mpi.h: No such file or directory` | Você compilou MPI com `g++`. Use `mpicxx` ou `make mpi`. |
 | `bash: ./baseline/06_nbody: No such file or directory` | Ainda não compilou. Rode `make` antes. |
 | Speedup perto de 1 | O Docker está com poucos núcleos. Veja `nproc` e aumente as CPUs no Docker Desktop. |
+| Speedup perto de 1 mesmo com CPUs suficientes | Faltou o `-fopenmp` na compilação. Use `make openmp`. |
 | Checksum diferente do baseline | Há um erro na versão paralela, provavelmente uma condição de corrida ou uma partícula esquecida. |
 | A primeira abertura do contêiner demora muito | É normal: isso só acontece na primeira vez. |
 
@@ -342,7 +323,7 @@ Dobrar N multiplica o tempo por cerca de 4, o que confirma a complexidade O(N²)
 
 Com a fração paralelizável P ≈ 0,999, a Lei de Amdahl prevê:
 
-| Threads / processos | Speedup teórico | Eficiência teórica |
+| Threads | Speedup teórico | Eficiência teórica |
 |---:|---:|---:|
 | 2 | 1,998× | 99,9% |
 | 4 | 3,988× | 99,7% |
