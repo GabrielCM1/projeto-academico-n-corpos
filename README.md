@@ -15,7 +15,7 @@ Makefile      compila tudo com "make"
 
 ## Requisitos
 
-- Linux com `g++` e suporte a OpenMP. No Windows, use o contêiner Docker do ambiente da disciplina.
+- Linux com `g++` e suporte a OpenMP. No Windows, use o contêiner Docker do `ambiente_pp`.
 - `make`
 
 ## Usando o contêiner Docker (Windows)
