@@ -1,5 +1,12 @@
-# Executáveis e artefatos de compilação
-06_nbody
+# Executáveis gerados pelo make
+baseline/06_nbody
+baseline/06_nbody_comentado
+openmp/*
+!openmp/*.cpp
+!openmp/*.md
+mpi/*
+!mpi/*.cpp
+!mpi/*.md
 *.exe
 *.o
 *.out
