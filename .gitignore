@@ -1,0 +1,5 @@
+# Executáveis e artefatos de compilação
+06_nbody
+*.exe
+*.o
+*.out
