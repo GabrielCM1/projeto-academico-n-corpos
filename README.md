@@ -7,7 +7,7 @@ O cálculo de forças ocupa quase todo o tempo de execução. Por isso ele é pa
 ```
 baseline/     versão sequencial de referência (não alterar)
 openmp/       versão paralela com OpenMP
-scripts/      validação do OpenMP contra o sequencial
+scripts/      validação e comparação de escalonamento
 resultados/   medições em CSV
 Makefile      compila tudo com "make"
 ```
@@ -91,6 +91,7 @@ make         # compila
 ```bash
 ./baseline/06_nbody 2000 10          # sequencial
 ./openmp/06_nbody_openmp 2000 10 4   # OpenMP
+OMP_SCHEDULE=dynamic ./openmp/06_nbody_openmp 2000 10 4   # outro escalonamento no laço de forças (padrão: static)
 ```
 
 Os números são, nessa ordem:
@@ -135,6 +136,7 @@ make validar   # compara OpenMP × sequencial em todas as combinações
 | `make baseline` | compila só o sequencial |
 | `make openmp` | compila só o OpenMP |
 | `make validar` | confere o OpenMP contra o sequencial com precisão total |
+| `make schedule` | compara `static`, `dynamic` e `guided` no laço de forças |
 | `make clean` | apaga os executáveis |
 
 ---
