@@ -4,6 +4,9 @@ baseline/06_nbody_comentado
 openmp/*
 !openmp/*.cpp
 !openmp/*.md
+mpi/*
+!mpi/*.cpp
+!mpi/*.md
 *.exe
 *.o
 *.out

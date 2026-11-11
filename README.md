@@ -1,12 +1,16 @@
-# Simulação de N-corpos com OpenMP
+# Simulação de N-corpos com OpenMP e MPI
 
 Simula N partículas que se atraem par a par ao longo de vários passos de tempo. A cada passo, o programa calcula a força de todas as partículas sobre cada uma (custo O(N²)) e depois atualiza velocidades e posições.
 
-O cálculo de forças ocupa quase todo o tempo de execução. Por isso ele é paralelizado com OpenMP e comparado com a versão sequencial.
+O cálculo de forças ocupa quase todo o tempo de execução. Por isso ele é paralelizado de dois jeitos e comparado com a versão sequencial:
+
+- **OpenMP:** threads que dividem a mesma memória.
+- **MPI:** processos com memória separada, que trocam as posições a cada passo.
 
 ```
 baseline/     versão sequencial de referência (não alterar)
 openmp/       versão paralela com OpenMP (detalhes em openmp/README.md)
+mpi/          versão paralela com MPI (detalhes em mpi/README.md)
 scripts/      validação e comparação de escalonamento
 resultados/   medições em CSV
 Makefile      compila tudo com "make"
@@ -16,7 +20,7 @@ Makefile      compila tudo com "make"
 
 ## Como funciona o ambiente
 
-O código roda num **contêiner Docker**: um Linux pronto, com `g++` e OpenMP, que roda dentro do Windows. Você não precisa instalar compilador nenhum.
+O código roda num **contêiner Docker**: um Linux pronto, com `g++`, OpenMP e MPI, que roda dentro do Windows. Você não precisa instalar compilador nenhum.
 
 O detalhe mais importante: **a pasta `ambiente_pp` do Windows e a pasta `/lab` do contêiner são a mesma pasta**. O que você salva de um lado aparece do outro na hora. Por isso o projeto precisa ficar dentro de `ambiente_pp\codigos\`.
 
@@ -92,6 +96,7 @@ make         # compila
 ./baseline/06_nbody 2000 10          # sequencial
 ./openmp/06_nbody_openmp 2000 10 4   # OpenMP
 OMP_SCHEDULE=dynamic ./openmp/06_nbody_openmp 2000 10 4   # outro escalonamento no laço de forças (padrão: static)
+mpirun -np 4 ./mpi/06_nbody_mpi 2000 10   # MPI com 4 processos
 ```
 
 Os números são, nessa ordem:
@@ -101,12 +106,13 @@ Os números são, nessa ordem:
 | `2000` | quantidade de partículas |
 | `10` | quantidade de passos de tempo |
 | `4` | quantidade de threads (só no OpenMP) |
+| `-np 4` | quantidade de processos (só no MPI) |
 
 A saída mostra o `checksum` e o `tempo`.
 
 ### O resultado está certo?
 
-Com os mesmos argumentos, **o checksum do OpenMP tem que ser igual ao do sequencial**. Se for diferente, tem bug na paralelização.
+Com os mesmos argumentos, **o checksum do OpenMP e do MPI tem que ser igual ao do sequencial**. Se for diferente, tem bug na paralelização.
 
 Atenção: com 6 casas, o checksum quase não muda mesmo se as forças estiverem erradas. A conferência completa, com precisão total, é feita por:
 
@@ -123,7 +129,7 @@ make validar   # compara OpenMP × sequencial em todas as combinações
 
 ### Ficou mais rápido?
 
-- **Speedup** = tempo sequencial ÷ tempo OpenMP. Com 4 threads, o ideal é chegar perto de 4.
+- **Speedup** = tempo sequencial ÷ tempo paralelo. Com 4 threads ou 4 processos, o ideal é chegar perto de 4.
 - Para medir, rode cada configuração 4 vezes, ignore a primeira e use a mediana das outras 3.
 
 ---
@@ -135,6 +141,7 @@ make validar   # compara OpenMP × sequencial em todas as combinações
 | `make` | compila tudo |
 | `make baseline` | compila só o sequencial |
 | `make openmp` | compila só o OpenMP |
+| `make mpi` | compila só o MPI |
 | `make validar` | confere o OpenMP contra o sequencial com precisão total |
 | `make schedule` | compara `static`, `dynamic` e `guided` no laço de forças |
 | `make clean` | apaga os executáveis |
@@ -150,3 +157,5 @@ make validar   # compara OpenMP × sequencial em todas as combinações
 | `No makefile found` | Você não está na pasta do projeto. Rode o `cd /lab/codigos/projeto-academico-n-corpos`. |
 | `No such file or directory` ao executar | Ainda não compilou. Rode `make`. |
 | O OpenMP não ficou mais rápido | Rode `nproc`. Se der 1 ou 2, aumente as CPUs no Docker Desktop, em *Settings > Resources*. |
+| `mpi.h: No such file or directory` | Código MPI se compila com `mpicxx`. Use `make mpi`. |
+| `mpirun` reclama de *slots* | Acrescente `--oversubscribe`: `mpirun --oversubscribe -np 8 ...` |
