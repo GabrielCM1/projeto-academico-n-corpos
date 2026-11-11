@@ -118,6 +118,7 @@ Atenção: com 6 casas, o checksum quase não muda mesmo se as forças estiverem
 
 ```bash
 make validar   # compara OpenMP × sequencial em todas as combinações
+make validar-mpi   # compara MPI × sequencial em todas as combinações
 ```
 
 | Partículas (10 passos) | Checksum esperado |
@@ -143,6 +144,7 @@ make validar   # compara OpenMP × sequencial em todas as combinações
 | `make openmp` | compila só o OpenMP |
 | `make mpi` | compila só o MPI |
 | `make validar` | confere o OpenMP contra o sequencial com precisão total |
+| `make validar-mpi` | confere o MPI contra o sequencial com precisão total |
 | `make schedule` | compara `static`, `dynamic` e `guided` no laço de forças |
 | `make clean` | apaga os executáveis |
 

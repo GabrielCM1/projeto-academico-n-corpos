@@ -7,7 +7,7 @@ BASE = baseline/06_nbody
 OMP  = $(patsubst %.cpp,%,$(wildcard openmp/*.cpp))
 MPI  = $(patsubst %.cpp,%,$(wildcard mpi/*.cpp))
 
-.PHONY: all baseline openmp mpi validar schedule clean
+.PHONY: all baseline openmp mpi validar validar-mpi schedule clean
 all: baseline openmp mpi
 
 baseline: $(BASE)
@@ -26,6 +26,10 @@ mpi/%: mpi/%.cpp
 # Confere o resultado do OpenMP contra o baseline (precisao total)
 validar: all
 	bash scripts/validar_openmp.sh
+
+# Confere o resultado do MPI contra o baseline (precisao total)
+validar-mpi: baseline mpi
+	bash scripts/validar_mpi.sh
 
 # Compara static, dynamic e guided no laco de forcas
 schedule: openmp
