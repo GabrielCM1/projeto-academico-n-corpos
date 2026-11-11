@@ -6,7 +6,7 @@ O cálculo de forças ocupa quase todo o tempo de execução. Por isso ele é pa
 
 ```
 baseline/     versão sequencial de referência (não alterar)
-openmp/       versão paralela com OpenMP
+openmp/       versão paralela com OpenMP (detalhes em openmp/README.md)
 scripts/      validação e comparação de escalonamento
 resultados/   medições em CSV
 Makefile      compila tudo com "make"
