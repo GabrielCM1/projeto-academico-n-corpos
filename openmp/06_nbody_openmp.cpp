@@ -2,8 +2,9 @@
  * Mesmo algoritmo do baseline (baseline/06_nbody.cpp): forca bruta O(N^2).
  *
  * Compilar: make openmp   (ou: g++ -O2 -fopenmp -o 06_nbody_openmp 06_nbody_openmp.cpp)
- * Executar: ./06_nbody_openmp 2000 10                         (corpos; passos)
- *           OMP_SCHEDULE=dynamic ./06_nbody_openmp 2000 10    (outro escalonamento no laco de forcas)
+ * Executar: ./06_nbody_openmp 2000 10 4                       (corpos; passos; threads)
+ *           ./06_nbody_openmp 2000 10                         (sem o 3o argumento: OMP_NUM_THREADS ou todos os nucleos)
+ *           OMP_SCHEDULE=dynamic ./06_nbody_openmp 2000 10 4  (outro escalonamento no laco de forcas)
  *
  * Por que o resultado e identico ao do baseline:
  *  - Laco de atualizacao: cada i so le e escreve as proprias posicoes/velocidades.
@@ -26,7 +27,17 @@ static double agora() {
 int main(int argc, char** argv) {
     int N = (argc > 1) ? atoi(argv[1]) : 2000;
     int STEPS = (argc > 2) ? atoi(argv[2]) : 10;
-    // [Gabriel] ler o numero de threads (3o argumento) e aplicar com omp_set_num_threads
+    // [Gabriel] numero de threads: 3o argumento, se vier. omp_set_num_threads vale
+    // para todas as regioes paralelas seguintes e tem prioridade sobre a variavel
+    // OMP_NUM_THREADS. Sem o argumento (ou com valor invalido), fica o padrao do
+    // OpenMP: OMP_NUM_THREADS, ou um thread por nucleo.
+    if (argc > 3) {
+        int T = atoi(argv[3]);
+        if (T > 0) omp_set_num_threads(T);
+        else fprintf(stderr, "aviso: numero de threads invalido (%s), usando o padrao\n", argv[3]);
+    }
+    // Quantas threads as regioes paralelas vao usar de fato, para mostrar na saida.
+    const int THREADS = omp_get_max_threads();
 
     // [Joao Pedro] escalonamento do laco de forcas.
     // O laco de forcas usa schedule(runtime), que le a variavel OMP_SCHEDULE;
@@ -74,7 +85,7 @@ int main(int argc, char** argv) {
 
     double soma = 0;
     for (int i = 0; i < N; i++) soma += x[i] + y[i];
-    // [Gabriel] incluir na saida o numero de threads usado
-    printf("N=%d passos=%d  checksum=%.6f  tempo=%.6f s\n", N, STEPS, soma, t1 - t0);
+    // [Gabriel] saida no mesmo formato do baseline, com o numero de threads usado
+    printf("N=%d passos=%d threads=%d  checksum=%.6f  tempo=%.6f s\n", N, STEPS, THREADS, soma, t1 - t0);
     return 0;
 }

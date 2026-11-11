@@ -2,7 +2,7 @@
  * 06_nbody.cpp — VERSAO COMENTADA PARA ESTUDO
  * ============================================================
  * Esta é uma cópia comentada do baseline original, só para
- * vocês entenderem o código com calma. A ENTREGA OFICIAL do
+ * entendimento do código. A ENTREGA OFICIAL do
  * Marco 1 continua sendo o arquivo 06_nbody.cpp original,
  * sem nenhuma alteração de lógica ou de entrada — como o
  * README.md da disciplina exige.
