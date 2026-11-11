@@ -7,6 +7,7 @@ O cálculo de forças ocupa quase todo o tempo de execução. Por isso ele é pa
 ```
 baseline/     versão sequencial de referência (não alterar)
 openmp/       versão paralela com OpenMP
+scripts/      validação do OpenMP contra o sequencial
 resultados/   medições em CSV
 Makefile      compila tudo com "make"
 ```
@@ -106,6 +107,12 @@ A saída mostra o `checksum` e o `tempo`.
 
 Com os mesmos argumentos, **o checksum do OpenMP tem que ser igual ao do sequencial**. Se for diferente, tem bug na paralelização.
 
+Atenção: com 6 casas, o checksum quase não muda mesmo se as forças estiverem erradas. A conferência completa, com precisão total, é feita por:
+
+```bash
+make validar   # compara OpenMP × sequencial em todas as combinações
+```
+
 | Partículas (10 passos) | Checksum esperado |
 |---:|---:|
 | 500 | 25750.000000 |
@@ -127,6 +134,7 @@ Com os mesmos argumentos, **o checksum do OpenMP tem que ser igual ao do sequenc
 | `make` | compila tudo |
 | `make baseline` | compila só o sequencial |
 | `make openmp` | compila só o OpenMP |
+| `make validar` | confere o OpenMP contra o sequencial com precisão total |
 | `make clean` | apaga os executáveis |
 
 ---
