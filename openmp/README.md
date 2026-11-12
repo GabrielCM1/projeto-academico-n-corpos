@@ -36,7 +36,16 @@ Por isso, o `scripts/validar_openmp.sh` compila cópias temporárias do baseline
 - o checksum com **precisão total** (`%.17g`, que identifica o `double` exato);
 - `vel` = Σ(|vx| + |vy|), que depende diretamente de todas as forças.
 
-Os dois valores têm que ser idênticos ao baseline em todas as combinações: N = 500, 1000, 2000, 4000 × 1, 2, 4, 8 threads × `static`, `dynamic`, `guided`. O resultado vai para `resultados/validacao_openmp.csv`.
+Os dois valores têm que ser idênticos ao baseline em todas as combinações: N = 500, 1000, 2000, 4000 × 1, 2, 4, 8 threads × `static`, `dynamic`, `guided`.
+
+Resultado: **48 de 48 combinações idênticas ao baseline**, bit a bit. Detalhes em [`resultados/validacao_openmp.csv`](../resultados/validacao_openmp.csv).
+
+| N | checksum (precisão total) | `vel` |
+|---:|---:|---:|
+| 500 | 25750.000000000149 | 7.148812846431134e-08 |
+| 1000 | 54000.000000000284 | 1.6058748775060036e-07 |
+| 2000 | 118000.00000000125 | 3.3896135882577011e-07 |
+| 4000 | 276000.00000000617 | 7.0070927876272649e-07 |
 
 Teste do próprio validador: numa cópia com uma corrida proposital (`parallel for` no laço `j`, com várias threads somando no mesmo `fx[i]`), o script acusou diferença em todas as combinações com mais de uma thread. Nessa versão errada, o checksum de 6 casas continuava `25750.000000` para N = 500.
 
@@ -46,16 +55,18 @@ O laço de forças usa `schedule(runtime)`, que lê a variável `OMP_SCHEDULE`. 
 
 **Padrão: `static`.** Sem `OMP_SCHEDULE`, o padrão do GCC para `schedule(runtime)` é `dynamic` com bloco 1. Por isso o programa fixa `static` no início do `main`. A carga é igual para todo `i`, porque cada um percorre os N corpos, então não há desbalanceamento para o `dynamic` corrigir.
 
-Medição preliminar (laço de forças com `#pragma omp parallel for schedule(runtime)`, i7-8550U com 4 núcleos físicos). A tabela será refeita com `make schedule` depois que o laço de forças estiver no repositório:
+Mediana de 3 execuções, depois de descartar 1 de aquecimento (i7-8550U: 4 núcleos físicos, 8 threads com hyper-threading). Dados em [`resultados/schedule_06_nbody.csv`](../resultados/schedule_06_nbody.csv):
 
 | N | threads | `static` | `static,1` | `dynamic` (bloco 1) | `dynamic,16` | `dynamic,64` | `guided` |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| 2000 | 4 | 0,064 s | 0,118 s | 0,759 s | 0,057 s | 0,056 s | 0,060 s |
-| 4000 | 4 | 0,237 s | 0,480 s | 3,170 s | 0,244 s | 0,246 s | 0,284 s |
+| 2000 | 4 | 0,060 s | 0,138 s | 0,778 s | 0,061 s | 0,058 s | 0,063 s |
+| 2000 | 8 | 0,067 s | 0,100 s | 0,454 s | 0,064 s | 0,096 s | 0,067 s |
+| 4000 | 4 | 0,242 s | 0,343 s | 3,210 s | 0,248 s | 0,252 s | 0,256 s |
+| 4000 | 8 | 0,265 s | 0,337 s | 1,886 s | 0,261 s | 0,252 s | 0,259 s |
 
 `static`, `dynamic,16/64` e `guided` empatam dentro do ruído. Os que distribuem iterações vizinhas para threads diferentes perdem feio.
 
-**Por que `dynamic` (bloco 1) é cerca de 13× mais lento: *false sharing*.** Com bloco 1, `i` e `i+1` vão para threads diferentes. `fx[i]` e `fx[i+1]` ficam na mesma linha de cache de 64 bytes, que comporta 8 `double`. O laço `j` grava `fx[i]` na memória a cada iteração: o assembly gerado com `-O2` tem duas gravações (`movsd`) dentro do laço, porque o compilador não consegue provar que `fx` não se sobrepõe a `x`. Cada gravação invalida a linha de cache nos outros núcleos. O `static,1` sofre o mesmo efeito (cerca de 2× mais lento) e o `dynamic` ainda soma o custo de distribuir as iterações uma a uma.
+**Por que `dynamic` (bloco 1) é 7× a 13× mais lento: *false sharing*.** Com bloco 1, `i` e `i+1` vão para threads diferentes. `fx[i]` e `fx[i+1]` ficam na mesma linha de cache de 64 bytes, que comporta 8 `double`. O laço `j` grava `fx[i]` na memória a cada iteração: o assembly gerado com `-O2` tem duas gravações (`movsd`) dentro do laço, porque o compilador não consegue provar que `fx` não se sobrepõe a `x`. Cada gravação invalida a linha de cache nos outros núcleos. O `static,1` sofre o mesmo efeito (1,3× a 2,3× mais lento) e o `dynamic` ainda soma o custo de distribuir as iterações uma a uma.
 
 Evidência:
 

@@ -59,8 +59,14 @@ int main(int argc, char** argv) {
     for (int s = 0; s < STEPS; s++) {   // passos sao dependentes: ficam em sequencia
         vector<double> fx(N, 0), fy(N, 0);
 
-        // [Henrique] laco de forcas, O(N^2): o hotspot. Paralelizar com
-        // #pragma omp parallel for schedule(runtime)   (o escalonamento e definido acima)
+        // [Henrique] laco de forcas, O(N^2): o hotspot (99,9% do tempo).
+        // Cada thread recebe um bloco de indices i e so escreve em fx[i]/fy[i]
+        // desse bloco; x, y e m sao so lidos. Nenhuma posicao e escrita por duas
+        // threads, entao nao ha condicao de corrida (sem critical/atomic/reduction).
+        // j, dx, dy, d2, f e inv sao declarados dentro do laco: privados de cada thread.
+        // schedule(runtime): usa o escalonamento definido no inicio do main (static
+        // por padrao) ou o de OMP_SCHEDULE, para o estudo comparativo.
+        #pragma omp parallel for schedule(runtime)
         for (int i = 0; i < N; i++)
             for (int j = 0; j < N; j++) if (i != j) {
                 double dx = x[j]-x[i], dy = y[j]-y[i];
