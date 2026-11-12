@@ -5,6 +5,8 @@
 #
 # Uso: scripts/comparar_schedule.sh        (gera resultados/schedule_06_nbody.csv)
 set -euo pipefail
+# Locale neutro: em pt_BR o sort -g e o awk esperam virgula decimal e leem "0.0123" como 0.
+export LC_ALL=C
 cd "$(dirname "$0")/.."
 
 NS=(2000 4000)
