@@ -17,7 +17,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-NS=(500 1000 2000 4000)
+NS=(500 1000 1414 2000 2828 4000)   # 1414 e 2828: tamanhos da escalabilidade fraca
 THREADS=(1 2 4 8)
 SCHEDS=(static dynamic guided)
 STEPS=10

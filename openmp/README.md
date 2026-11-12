@@ -36,15 +36,17 @@ Por isso, o `scripts/validar_openmp.sh` compila cópias temporárias do baseline
 - o checksum com **precisão total** (`%.17g`, que identifica o `double` exato);
 - `vel` = Σ(|vx| + |vy|), que depende diretamente de todas as forças.
 
-Os dois valores têm que ser idênticos ao baseline em todas as combinações: N = 500, 1000, 2000, 4000 × 1, 2, 4, 8 threads × `static`, `dynamic`, `guided`.
+Os dois valores têm que ser idênticos ao baseline em todas as combinações: N = 500, 1000, 1414, 2000, 2828, 4000 × 1, 2, 4, 8 threads × `static`, `dynamic`, `guided`. Os tamanhos 1414 e 2828 são os da escalabilidade fraca.
 
-Resultado: **48 de 48 combinações idênticas ao baseline**, bit a bit. Detalhes em [`resultados/validacao_openmp.csv`](../resultados/validacao_openmp.csv).
+Resultado: **72 de 72 combinações idênticas ao baseline**, bit a bit. Detalhes em [`resultados/validacao_openmp.csv`](../resultados/validacao_openmp.csv).
 
 | N | checksum (precisão total) | `vel` |
 |---:|---:|---:|
 | 500 | 25750.000000000149 | 7.148812846431134e-08 |
 | 1000 | 54000.000000000284 | 1.6058748775060036e-07 |
+| 1414 | 78687.000000000393 | 2.3391601313380268e-07 |
 | 2000 | 118000.00000000125 | 3.3896135882577011e-07 |
+| 2828 | 177562.00000000253 | 4.8859842802585863e-07 |
 | 4000 | 276000.00000000617 | 7.0070927876272649e-07 |
 
 Teste do próprio validador: numa cópia com uma corrida proposital (`parallel for` no laço `j`, com várias threads somando no mesmo `fx[i]`), o script acusou diferença em todas as combinações com mais de uma thread. Nessa versão errada, o checksum de 6 casas continuava `25750.000000` para N = 500.
