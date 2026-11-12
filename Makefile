@@ -4,10 +4,11 @@ MPICXX   = mpicxx
 CXXFLAGS = -O2
 
 BASE = baseline/06_nbody
+PERFIL = baseline/06_nbody_perfil
 OMP  = $(patsubst %.cpp,%,$(wildcard openmp/*.cpp))
 MPI  = $(patsubst %.cpp,%,$(wildcard mpi/*.cpp))
 
-.PHONY: all baseline openmp mpi validar validar-mpi schedule medir clean
+.PHONY: all baseline openmp mpi validar validar-mpi schedule medir perfil clean
 all: baseline openmp mpi
 
 baseline: $(BASE)
@@ -40,5 +41,9 @@ schedule: openmp
 medir:
 	bash scripts/medir.sh
 
+# Perfilamento do baseline: tempo de cada trecho e estimativa de Amdahl
+perfil: $(BASE) $(PERFIL)
+	bash scripts/perfilar.sh
+
 clean:
-	rm -f $(BASE) $(OMP) $(MPI)
+	rm -f $(BASE) $(PERFIL) $(OMP) $(MPI)

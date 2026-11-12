@@ -1,6 +1,7 @@
 # Executáveis gerados pelo make
 baseline/06_nbody
 baseline/06_nbody_comentado
+baseline/06_nbody_perfil
 openmp/*
 !openmp/*.cpp
 !openmp/*.md
