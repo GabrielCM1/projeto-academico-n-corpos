@@ -24,7 +24,7 @@ mpi/%: mpi/%.cpp
 	$(MPICXX) $(CXXFLAGS) $< -o $@
 
 # Confere o resultado do OpenMP contra o baseline (precisao total)
-validar: all
+validar: baseline openmp
 	bash scripts/validar_openmp.sh
 
 # Confere o resultado do MPI contra o baseline (precisao total)
