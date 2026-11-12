@@ -72,3 +72,31 @@ Evidência:
 
 - Com bloco 16 (16 × 8 bytes = 2 linhas de cache inteiras por thread), o `dynamic` fica igual ao `static`.
 - Numa cópia de teste que acumula a força numa variável local e grava `fx[i]` uma vez só, o `dynamic` com bloco 1 cai de 0,77 s para 0,046 s.
+
+## Medições (`make medir`)
+
+O `scripts/medir_openmp.sh` mede o baseline e o OpenMP **na mesma sessão**, para o speedup comparar tempos tirados nas mesmas condições de frequência, temperatura e carga. Protocolo: 4 execuções por configuração, a 1ª descartada (aquecimento), mediana das outras 3. N = 500, 1000, 2000, 4000. 10 passos. 1, 2, 4 e 8 threads. O script também confere se o programa usou o número de threads pedido.
+
+Arquivos gerados:
+
+- [`resultados/openmp_06_nbody.csv`](../resultados/openmp_06_nbody.csv): `n,steps,threads,repeticao,tempo_s,checksum,descartada`
+- [`resultados/baseline_06_nbody_mesma_sessao.csv`](../resultados/baseline_06_nbody_mesma_sessao.csv): o baseline remedido junto. O `baseline_06_nbody.csv` do Marco 1 foi medido em outro dia e outro ambiente, e não serve para calcular o speedup.
+- [`resultados/maquina_openmp.txt`](../resultados/maquina_openmp.txt): `nproc` = 8, Intel i7-8550U (4 núcleos físicos, 2 threads por núcleo), Ubuntu 24.04 em contêiner, g++ 13.3, na tomada, carga 1,0 antes de medir.
+
+Medianas (em segundos):
+
+| N | baseline | 1 thread | 2 threads | 4 threads | 8 threads |
+|---:|---:|---:|---:|---:|---:|
+| 500 | 0,0112 | 0,0115 | 0,0063 | 0,0060 | 0,0054 |
+| 1000 | 0,0433 | 0,0477 | 0,0235 | 0,0131 | 0,0192 |
+| 2000 | 0,1733 | 0,1823 | 0,0950 | 0,0516 | 0,0543 |
+| 4000 | 0,6912 | 0,7172 | 0,3670 | 0,2153 | 0,2247 |
+
+Todas as execuções deram o checksum do baseline.
+
+### O que os tempos mostram
+
+- **1 thread é 3% a 10% mais lento que o baseline.** É o custo do OpenMP sem nenhum paralelismo: criar e encerrar as regiões paralelas, 2 por passo, e distribuir o laço com `schedule(runtime)`.
+- **8 threads não ganham de 4.** A máquina tem só 4 núcleos físicos. A 5ª à 8ª threads são *hyper-threads* que dividem a mesma unidade de ponto flutuante com as 4 primeiras, e o laço de forças é praticamente só conta de ponto flutuante. Além disso, com 8 threads em 8 CPUs lógicas não sobra CPU para o sistema. Qualquer outro processo atrasa uma thread, e as outras esperam por ela na barreira. Numa medição anterior com o Discord aberto, 8 threads chegaram a ficar 8× mais lentas que 4 em N = 500.
+- **N = 500 quase não escala além de 2 threads.** O programa inteiro roda em cerca de 6 ms, então os custos fixos (criar as threads na primeira região paralela e as 2 barreiras por passo) pesam tanto quanto a conta.
+- **Picos isolados:** em algumas configurações, uma das 3 repetições válidas saiu até 34% mais lenta. Por exemplo, N = 4000 com 4 threads deu 0,211, 0,282 e 0,215 s. A mediana descarta esse pico, e é por isso que o protocolo usa a mediana e não a média.

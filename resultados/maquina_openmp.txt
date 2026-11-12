@@ -1,0 +1,12 @@
+data:       2026-11-11 21:22
+nproc:      8
+cpu:        Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+nucleos:    4 fisicos por soquete, 2 threads por nucleo, 1 soquete(s)
+memoria:    15Gi
+so:         Ubuntu 24.04.4 LTS, kernel 6.16.8-200.fc42.x86_64
+ambiente:   conteiner quay.io/toolbx/ubuntu-toolbox:latest
+energia:    na tomada
+carga:      1.00 1.92 1.83 (media de 1, 5 e 15 min antes de medir)
+compilador: g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+flags:      -O2 (baseline), -O2 -fopenmp (openmp); escalonamento padrao do programa (static)
+protocolo:  4 execucoes por configuracao, 1a descartada, mediana das outras 3; 10 passos
