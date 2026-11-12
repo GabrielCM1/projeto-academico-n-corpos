@@ -75,28 +75,40 @@ Evidência:
 
 ## Medições (`make medir`)
 
-O `scripts/medir_openmp.sh` mede o baseline e o OpenMP **na mesma sessão**, para o speedup comparar tempos tirados nas mesmas condições de frequência, temperatura e carga. Protocolo: 4 execuções por configuração, a 1ª descartada (aquecimento), mediana das outras 3. N = 500, 1000, 2000, 4000. 10 passos. 1, 2, 4 e 8 threads. O script também confere se o programa usou o número de threads pedido.
+O `scripts/medir.sh` mede o baseline, o OpenMP e o MPI **na mesma sessão**, para os speedups compararem tempos tirados nas mesmas condições. Os resultados do MPI estão em [`mpi/README.md`](../mpi/README.md).
 
-Arquivos gerados:
+Protocolo:
 
-- [`resultados/openmp_06_nbody.csv`](../resultados/openmp_06_nbody.csv): `n,steps,threads,repeticao,tempo_s,checksum,descartada`
-- [`resultados/baseline_06_nbody_mesma_sessao.csv`](../resultados/baseline_06_nbody_mesma_sessao.csv): o baseline remedido junto. O `baseline_06_nbody.csv` do Marco 1 foi medido em outro dia e outro ambiente, e não serve para calcular o speedup.
-- [`resultados/maquina_openmp.txt`](../resultados/maquina_openmp.txt): `nproc` = 8, Intel i7-8550U (4 núcleos físicos, 2 threads por núcleo), Ubuntu 24.04 em contêiner, g++ 13.3, na tomada, carga 1,0 antes de medir.
+- 4 execuções por configuração, a 1ª descartada (aquecimento), mediana das outras 3. N = 500, 1000, 2000, 4000. 10 passos. 1, 2, 4 e 8 threads.
+- Antes de cada N, o script espera o processador esfriar até 55 °C. Dentro do mesmo N, ele roda a 1ª execução de todas as configurações, depois a 2ª, e assim por diante.
+- Uma thread por núcleo físico (`OMP_PLACES=cores OMP_PROC_BIND=spread`). A 2ª thread de hardware de cada núcleo só entra com 8 threads.
+
+Ambiente ([`resultados/maquina.txt`](../resultados/maquina.txt)): contêiner oficial da disciplina (`iesb/pp-lab:2026.2`), Intel i7-8550U (4 núcleos físicos, `nproc` = 8), g++ 13.3, na tomada. Dados brutos em [`resultados/openmp_06_nbody.csv`](../resultados/openmp_06_nbody.csv) e [`resultados/baseline_06_nbody_mesma_sessao.csv`](../resultados/baseline_06_nbody_mesma_sessao.csv). O `baseline_06_nbody.csv` do Marco 1 foi medido em outro dia e não entra no cálculo do speedup.
 
 Medianas (em segundos):
 
 | N | baseline | 1 thread | 2 threads | 4 threads | 8 threads |
 |---:|---:|---:|---:|---:|---:|
-| 500 | 0,0112 | 0,0115 | 0,0063 | 0,0060 | 0,0054 |
-| 1000 | 0,0433 | 0,0477 | 0,0235 | 0,0131 | 0,0192 |
-| 2000 | 0,1733 | 0,1823 | 0,0950 | 0,0516 | 0,0543 |
-| 4000 | 0,6912 | 0,7172 | 0,3670 | 0,2153 | 0,2247 |
+| 500 | 0,0100 | 0,0103 | 0,0057 | 0,0037 | 0,0034 |
+| 1000 | 0,0395 | 0,0408 | 0,0209 | 0,0117 | 0,0114 |
+| 2000 | 0,1543 | 0,1598 | 0,0866 | 0,0438 | 0,0439 |
+| 4000 | 0,6146 | 0,6771 | 0,3613 | 0,1861 | 0,1903 |
 
-Todas as execuções deram o checksum do baseline.
+As 64 execuções do OpenMP deram o checksum do baseline. A dispersão típica entre as 3 repetições válidas foi de 2%.
 
 ### O que os tempos mostram
 
-- **1 thread é 3% a 10% mais lento que o baseline.** É o custo do OpenMP sem nenhum paralelismo: criar e encerrar as regiões paralelas, 2 por passo, e distribuir o laço com `schedule(runtime)`.
-- **8 threads não ganham de 4.** A máquina tem só 4 núcleos físicos. A 5ª à 8ª threads são *hyper-threads* que dividem a mesma unidade de ponto flutuante com as 4 primeiras, e o laço de forças é praticamente só conta de ponto flutuante. Além disso, com 8 threads em 8 CPUs lógicas não sobra CPU para o sistema. Qualquer outro processo atrasa uma thread, e as outras esperam por ela na barreira. Numa medição anterior com o Discord aberto, 8 threads chegaram a ficar 8× mais lentas que 4 em N = 500.
-- **N = 500 quase não escala além de 2 threads.** O programa inteiro roda em cerca de 6 ms, então os custos fixos (criar as threads na primeira região paralela e as 2 barreiras por passo) pesam tanto quanto a conta.
-- **Picos isolados:** em algumas configurações, uma das 3 repetições válidas saiu até 34% mais lenta. Por exemplo, N = 4000 com 4 threads deu 0,211, 0,282 e 0,215 s. A mediana descarta esse pico, e é por isso que o protocolo usa a mediana e não a média.
+- **1 thread é 3% a 10% mais lento que o baseline.** É o custo do OpenMP sem nenhum paralelismo: abrir e fechar 2 regiões paralelas por passo e distribuir o laço com `schedule(runtime)`. O MPI com 1 processo não tem esse custo e empata com o baseline.
+- **Com 4 threads, o tempo cai 3,3× a 3,5× a partir de N = 1000.** Não chega a 4× por causa do custo acima, das 2 barreiras por passo e da frequência do processador, que cai quando mais núcleos trabalham ao mesmo tempo.
+- **8 threads empatam com 4.** A máquina tem só 4 núcleos físicos. A 5ª à 8ª threads dividem a mesma unidade de ponto flutuante com as 4 primeiras, e o laço de forças é praticamente só conta de ponto flutuante.
+- **N = 500 rende menos (2,7× com 4 threads).** O programa inteiro roda em cerca de 10 ms, então os custos fixos pesam mais.
+
+### Problemas de medição encontrados (e corrigidos)
+
+As duas primeiras rodadas deram números inconsistentes. Os três ajustes do protocolo vieram delas:
+
+1. **Temperatura.** Medindo o OpenMP inteiro e depois o MPI, o MPI pegava o processador quente e com a frequência reduzida. Com N = 500, o MPI de 1 processo chegou a sair 2× mais lento que o baseline. Por isso o script espera o processador esfriar antes de cada N e intercala as configurações.
+2. **Afinidade.** Sem fixar as threads, o sistema às vezes põe duas no **mesmo** núcleo físico. Essas duas andam na metade da velocidade, e as outras esperam por elas na barreira. Com N = 1000 e 10 repetições, 2 das 10 execuções de 4 threads saíram cerca de 2× mais lentas sem afinidade, e nenhuma com afinidade. No MPI com 4 processos foram 6 de 10, a ponto de a mediana de 3 pegar o valor errado.
+3. **Outros programas abertos.** Numa medição com o Discord aberto, 8 threads chegaram a ficar 8× mais lentas que 4 em N = 500.
+
+Para reproduzir os números à mão, use a mesma afinidade: `OMP_PLACES=cores OMP_PROC_BIND=spread ./openmp/06_nbody_openmp 4000 10 4`.
