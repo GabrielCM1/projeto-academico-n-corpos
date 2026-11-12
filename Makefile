@@ -8,7 +8,7 @@ PERFIL = baseline/06_nbody_perfil
 OMP  = $(patsubst %.cpp,%,$(wildcard openmp/*.cpp))
 MPI  = $(patsubst %.cpp,%,$(wildcard mpi/*.cpp))
 
-.PHONY: all baseline openmp mpi validar validar-mpi schedule medir fraca perfil clean
+.PHONY: all baseline openmp mpi validar validar-mpi schedule medir fraca perfil graficos clean
 all: baseline openmp mpi
 
 baseline: $(BASE)
@@ -48,6 +48,12 @@ fraca:
 # Perfilamento do baseline: tempo de cada trecho e estimativa de Amdahl
 perfil: $(BASE) $(PERFIL)
 	bash scripts/perfilar.sh
+
+# Speedup, eficiencia e graficos (issue #4) a partir dos CSVs do make medir e do make perfil.
+# Instala o matplotlib no conteiner se faltar (o conteiner e recriado a cada abertura).
+graficos:
+	python3 -c "import matplotlib" 2>/dev/null || pip install --quiet --break-system-packages matplotlib
+	python3 scripts/graficos.py
 
 clean:
 	rm -f $(BASE) $(PERFIL) $(OMP) $(MPI)
