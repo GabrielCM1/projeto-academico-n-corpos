@@ -35,9 +35,10 @@ validar-mpi: baseline mpi
 schedule: openmp
 	bash scripts/comparar_schedule.sh
 
-# Mede baseline e OpenMP (1, 2, 4, 8 threads) e gera os CSVs em resultados/
-medir: baseline openmp
-	bash scripts/medir_openmp.sh
+# Mede baseline, OpenMP (1, 2, 4, 8 threads) e MPI (1, 2, 4, 8 processos) na mesma
+# sessao, intercalados, e gera os CSVs em resultados/ (sem MPI instalado, mede so os dois primeiros)
+medir:
+	bash scripts/medir.sh
 
 clean:
 	rm -f $(BASE) $(OMP) $(MPI)

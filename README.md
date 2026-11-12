@@ -131,7 +131,7 @@ make validar-mpi   # compara MPI × sequencial em todas as combinações
 ### Ficou mais rápido?
 
 - **Speedup** = tempo sequencial ÷ tempo paralelo. Com 4 threads ou 4 processos, o ideal é chegar perto de 4.
-- Para medir, rode cada configuração 4 vezes, ignore a primeira e use a mediana das outras 3. O `make medir` faz isso para o sequencial e o OpenMP e salva os CSVs em `resultados/`.
+- Para medir, rode cada configuração 4 vezes, ignore a primeira e use a mediana das outras 3. O `make medir` faz isso para o sequencial, o OpenMP e o MPI e salva os CSVs em `resultados/`.
 - Feche os outros programas antes de medir: com todas as CPUs ocupadas, qualquer programa aberto atrasa uma thread e as outras esperam por ela.
 
 ---
@@ -147,7 +147,7 @@ make validar-mpi   # compara MPI × sequencial em todas as combinações
 | `make validar` | confere o OpenMP contra o sequencial com precisão total |
 | `make validar-mpi` | confere o MPI contra o sequencial com precisão total |
 | `make schedule` | compara `static`, `dynamic` e `guided` no laço de forças |
-| `make medir` | mede sequencial e OpenMP (1, 2, 4, 8 threads) e gera os CSVs |
+| `make medir` | mede sequencial, OpenMP (1, 2, 4, 8 threads) e MPI (1, 2, 4, 8 processos) e gera os CSVs |
 | `make clean` | apaga os executáveis |
 
 ---
