@@ -13,6 +13,7 @@ openmp/       versão paralela com OpenMP (detalhes em openmp/README.md)
 mpi/          versão paralela com MPI (detalhes em mpi/README.md)
 scripts/      validação e comparação de escalonamento
 resultados/   medições em CSV (índice e escalabilidade fraca em resultados/README.md)
+apresentacao/ slides do seminário do Marco 2 (com anotações do que falar)
 Makefile      compila tudo com "make"
 ```
 
