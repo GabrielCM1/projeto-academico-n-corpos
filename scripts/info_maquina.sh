@@ -36,3 +36,13 @@ temperatura_cpu() {
         fi
     done
 }
+
+# Espera o processador esfriar ate ESFRIAR graus (padrao 55), no maximo ESPERA_MAX
+# segundos (padrao 180); imprime a temperatura de partida.
+esfria() {
+    local t i limite=${ESFRIAR:-55} max=${ESPERA_MAX:-180}
+    t=$(temperatura_cpu)
+    [[ -z $t ]] && { echo "sem sensor"; return; }
+    for (( i = 0; i < max && t > limite; i += 5 )); do sleep 5; t=$(temperatura_cpu); done
+    echo "${t}C apos ${i} s de espera"
+}

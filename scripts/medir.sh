@@ -78,15 +78,6 @@ echo "n,steps,processos,repeticao,tempo_s,comunicacao_s,checksum,descartada" > "
 mediana3() { printf "%s\n" "$@" | sort -g | sed -n 2p; }
 campo()    { sed -nE "s/.*[[:space:]]$1=([0-9.]+).*/\1/p"; }
 
-# Espera o processador esfriar; imprime a temperatura de partida.
-esfria() {
-    local t i
-    t=$(temperatura_cpu)
-    [[ -z $t ]] && { echo "sem sensor"; return; }
-    for (( i = 0; i < ESPERA_MAX && t > ESFRIAR; i += 5 )); do sleep 5; t=$(temperatura_cpu); done
-    echo "${t}C apos ${i} s de espera"
-}
-
 # Roda uma configuracao uma vez. $1 = tipo (base|omp|mpi), $2 = N, $3 = threads/processos, $4 = repeticao
 roda() {
     local tipo=$1 n=$2 k=$3 r=$4 out desc
