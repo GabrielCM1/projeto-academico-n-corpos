@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# Mede baseline, OpenMP e MPI na mesma sessao (issue #3 e curva do MPI).
+# Mede baseline, OpenMP e MPI na mesma sessao.
+#   scripts/medir.sh        escalabilidade forte: N fixo, mais threads/processos (issue #3)
+#   scripts/medir.sh fraca  escalabilidade fraca: N cresce com P, trabalho por thread/processo
+#                           constante (issue #8). Como o custo por passo e O(N^2), N = 1000*sqrt(P):
+#                           P = 1, 2, 4, 8 -> N = 1000, 1414, 2000, 2828.
 #
 # Protocolo: 4 execucoes por configuracao; a 1a e aquecimento e e descartada;
 # vale a mediana das outras 3. N = 500, 1000, 2000, 4000; 10 passos;
@@ -28,12 +32,16 @@
 # Feche os outros programas antes: com todas as CPUs ocupadas, qualquer processo
 # extra atrasa uma thread/processo e os outros esperam por ele na sincronizacao.
 #
-# Uso: scripts/medir.sh     (ou: make medir; sem MPI instalado, mede so baseline e OpenMP)
-# Gera:
+# Uso: scripts/medir.sh [fraca]   (ou: make medir / make fraca; sem MPI instalado, mede so baseline e OpenMP)
+# Em todos os modos, cada execucao paralela tem que dar o checksum do baseline com o mesmo N.
+# Gera, no modo forte:
 #   resultados/baseline_06_nbody_mesma_sessao.csv   n,steps,repeticao,tempo_s,checksum,descartada
 #   resultados/openmp_06_nbody.csv                  n,steps,threads,repeticao,tempo_s,checksum,descartada
 #   resultados/mpi_06_nbody.csv                     n,steps,processos,repeticao,tempo_s,comunicacao_s,checksum,descartada
 #   resultados/maquina.txt                          nproc, CPU, ambiente, compiladores e data
+# No modo fraca, os mesmos formatos em resultados/fraca_baseline_06_nbody.csv,
+# fraca_openmp_06_nbody.csv, fraca_mpi_06_nbody.csv e maquina_fraca.txt (a coluna
+# threads/processos e o P de cada N).
 set -euo pipefail
 # Locale neutro: em pt_BR o sort -g e o awk esperam virgula decimal e leem "0.0123" como 0.
 export LC_ALL=C
@@ -48,10 +56,20 @@ ESFRIAR=${ESFRIAR:-55}       # temperatura (C) para comecar cada N
 ESPERA_MAX=${ESPERA_MAX:-180} # espera maxima (s) por N
 MPIRUN=(mpirun --use-hwthread-cpus --map-by core --bind-to core)
 export OMP_PLACES=cores OMP_PROC_BIND=spread
-CSV_BASE=resultados/baseline_06_nbody_mesma_sessao.csv
-CSV_OMP=resultados/openmp_06_nbody.csv
-CSV_MPI=resultados/mpi_06_nbody.csv
-MAQ=resultados/maquina.txt
+N0=${N0:-1000}               # tamanho base da escalabilidade fraca
+
+MODO=${1:-forte}
+case $MODO in
+    forte) CSV_BASE=resultados/baseline_06_nbody_mesma_sessao.csv
+           CSV_OMP=resultados/openmp_06_nbody.csv
+           CSV_MPI=resultados/mpi_06_nbody.csv
+           MAQ=resultados/maquina.txt ;;
+    fraca) CSV_BASE=resultados/fraca_baseline_06_nbody.csv
+           CSV_OMP=resultados/fraca_openmp_06_nbody.csv
+           CSV_MPI=resultados/fraca_mpi_06_nbody.csv
+           MAQ=resultados/maquina_fraca.txt ;;
+    *)     echo "uso: $0 [fraca]" >&2; exit 1 ;;
+esac
 
 if command -v mpicxx >/dev/null && command -v mpirun >/dev/null; then
     COM_MPI=1; make -s baseline openmp mpi
@@ -68,6 +86,7 @@ source scripts/info_maquina.sh
     echo "flags:      -O2 (baseline e mpicxx), -O2 -fopenmp (openmp); escalonamento padrao do OpenMP (static)"
     echo "protocolo:  $REPS execucoes por configuracao, 1a descartada, mediana das outras 3; $STEPS passos;"
     echo "            configuracoes do mesmo N intercaladas; espera ate ${ESFRIAR}C (max ${ESPERA_MAX} s) antes de cada N"
+    [[ $MODO == fraca ]] && echo "modo:       escalabilidade fraca, N = $N0*sqrt(P)"
 } > "$MAQ"
 cat "$MAQ"; echo
 
@@ -100,13 +119,57 @@ med() {
         'NR > 1 && $1 == n && (ck == 0 || $ck == k) && $NF == "nao" {print $cv}' "$1")
 }
 
+# Toda execucao paralela com este N tem que dar o checksum do baseline com o mesmo N. $1 = N
+confere_checksum() {
+    local ref ruins
+    ref=$(awk -F, -v n="$1" 'NR > 1 && $1 == n {print $(NF-1); exit}' "$CSV_BASE")
+    ruins=$(awk -F, -v n="$1" -v ref="$ref" 'NR > 1 && $1 == n && $(NF-1) != ref' "$CSV_OMP" "$CSV_MPI")
+    [[ -z $ruins ]] || { echo "erro: checksum diferente do baseline ($ref) com N=$1:" >&2; echo "$ruins" >&2; exit 1; }
+}
+
+if [[ $MODO == fraca ]]; then
+    NPS=()                      # N de cada P
+    for p in "${THREADS[@]}"; do
+        n=$(awk -v n0="$N0" -v p="$p" 'BEGIN { printf "%.0f", n0 * sqrt(p) }'); NPS+=("$n")
+        estado=$(esfria); echo "inicio P=$p N=$n: processador a $estado" >> "$MAQ"
+        echo "== P=$p N=$n (processador: $estado)"
+        for r in $(seq 1 $REPS); do
+            roda base "$n" 0 "$r"
+            roda omp "$n" "$p" "$r"
+            (( COM_MPI )) && roda mpi "$n" "$p" "$r"
+        done
+        confere_checksum "$n"
+    done
+    # Eficiencia fraca: T(1 thread/processo, N0) / T(P, N0*sqrt(P)); ideal = 1.
+    # Speedup escalado (Lei de Gustafson) = P * eficiencia fraca.
+    echo
+    tb0=$(med "$CSV_BASE" "$N0" 0 0 4); to0=$(med "$CSV_OMP" "$N0" 3 1 5)
+    (( COM_MPI )) && tm0=$(med "$CSV_MPI" "$N0" 3 1 5)
+    printf "%-3s %-5s %-11s %-11s %-9s %-11s %-11s %-9s\n" P N baseline openmp ef.omp mpi comunic. ef.mpi
+    for i in "${!THREADS[@]}"; do
+        p=${THREADS[$i]}; n=${NPS[$i]}
+        tb=$(med "$CSV_BASE" "$n" 0 0 4); to=$(med "$CSV_OMP" "$n" 3 "$p" 5)
+        lo=$(printf "%-3s %-5s %-11s %-11s %-9s" "$p" "$n" "$tb" "$to" "$(awk -v a="$to0" -v b="$to" 'BEGIN{printf "%.3f", a/b}')")
+        if (( COM_MPI )); then
+            tm=$(med "$CSV_MPI" "$n" 3 "$p" 5); cm=$(med "$CSV_MPI" "$n" 3 "$p" 6)
+            lo="$lo $(printf "%-11s %-11s %-9s" "$tm" "$cm" "$(awk -v a="$tm0" -v b="$tm" 'BEGIN{printf "%.3f", a/b}')")"
+        fi
+        echo "$lo"
+    done
+    echo
+    echo "Resultados salvos em $CSV_BASE, $CSV_OMP, $CSV_MPI e $MAQ"
+    exit 0
+fi
+
 for n in "${NS[@]}"; do
-    echo "== N=$n (processador: $(esfria))"
+    estado=$(esfria); echo "inicio N=$n: processador a $estado" >> "$MAQ"
+    echo "== N=$n (processador: $estado)"
     for r in $(seq 1 $REPS); do
         roda base "$n" 0 "$r"
         for t in "${THREADS[@]}"; do roda omp "$n" "$t" "$r"; done
         for p in "${PROCS[@]}";   do roda mpi "$n" "$p" "$r"; done
     done
+    confere_checksum "$n"
     tb=$(med "$CSV_BASE" "$n" 0 0 4)
     printf "  %-14s mediana=%s s\n" baseline "$tb"
     for t in "${THREADS[@]}"; do

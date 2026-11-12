@@ -12,7 +12,7 @@ baseline/     versão sequencial de referência (não alterar) e perfilamento (b
 openmp/       versão paralela com OpenMP (detalhes em openmp/README.md)
 mpi/          versão paralela com MPI (detalhes em mpi/README.md)
 scripts/      validação e comparação de escalonamento
-resultados/   medições em CSV
+resultados/   medições em CSV (índice e escalabilidade fraca em resultados/README.md)
 Makefile      compila tudo com "make"
 ```
 
@@ -148,6 +148,7 @@ make validar-mpi   # compara MPI × sequencial em todas as combinações
 | `make validar-mpi` | confere o MPI contra o sequencial com precisão total |
 | `make schedule` | compara `static`, `dynamic` e `guided` no laço de forças |
 | `make medir` | mede sequencial, OpenMP (1, 2, 4, 8 threads) e MPI (1, 2, 4, 8 processos) e gera os CSVs |
+| `make fraca` | mede a escalabilidade fraca: N = 1000·√P com 1, 2, 4, 8 threads/processos |
 | `make perfil` | mede o tempo de cada trecho do sequencial e estima o speedup máximo pela Lei de Amdahl |
 | `make clean` | apaga os executáveis |
 

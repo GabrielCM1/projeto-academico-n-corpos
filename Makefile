@@ -8,7 +8,7 @@ PERFIL = baseline/06_nbody_perfil
 OMP  = $(patsubst %.cpp,%,$(wildcard openmp/*.cpp))
 MPI  = $(patsubst %.cpp,%,$(wildcard mpi/*.cpp))
 
-.PHONY: all baseline openmp mpi validar validar-mpi schedule medir perfil clean
+.PHONY: all baseline openmp mpi validar validar-mpi schedule medir fraca perfil clean
 all: baseline openmp mpi
 
 baseline: $(BASE)
@@ -40,6 +40,10 @@ schedule: openmp
 # sessao, intercalados, e gera os CSVs em resultados/ (sem MPI instalado, mede so os dois primeiros)
 medir:
 	bash scripts/medir.sh
+
+# Escalabilidade fraca: N = 1000*sqrt(P) com P = 1, 2, 4, 8 (trabalho constante por thread/processo)
+fraca:
+	bash scripts/medir.sh fraca
 
 # Perfilamento do baseline: tempo de cada trecho e estimativa de Amdahl
 perfil: $(BASE) $(PERFIL)
