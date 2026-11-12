@@ -151,6 +151,7 @@ make validar-mpi   # compara MPI × sequencial em todas as combinações
 | `make medir` | mede sequencial, OpenMP (1, 2, 4, 8 threads) e MPI (1, 2, 4, 8 processos) e gera os CSVs |
 | `make fraca` | mede a escalabilidade fraca: N = 1000·√P com 1, 2, 4, 8 threads/processos |
 | `make perfil` | mede o tempo de cada trecho do sequencial e estima o speedup máximo pela Lei de Amdahl |
+| `make graficos` | calcula speedup e eficiência e gera os gráficos em `resultados/` (instala o `matplotlib` se faltar, o que precisa de internet; os gráficos já estão no repositório) |
 | `make clean` | apaga os executáveis |
 
 ---
@@ -165,4 +166,4 @@ make validar-mpi   # compara MPI × sequencial em todas as combinações
 | `No such file or directory` ao executar | Ainda não compilou. Rode `make`. |
 | O OpenMP não ficou mais rápido | Rode `nproc`. Se der 1 ou 2, aumente as CPUs no Docker Desktop, em *Settings > Resources*. |
 | `mpi.h: No such file or directory` | Código MPI se compila com `mpicxx`. Use `make mpi`. |
-| `mpirun` reclama de *slots* | Acrescente `--oversubscribe`: `mpirun --oversubscribe -np 8 ...` |
+| `mpirun` reclama de *slots* | O OpenMPI conta só os núcleos físicos. Use `mpirun --use-hwthread-cpus -np 8 ...` para contar cada CPU lógica (como no `make medir`), ou `--oversubscribe` se pedir mais processos que CPUs. |
