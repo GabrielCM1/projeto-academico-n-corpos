@@ -5,6 +5,9 @@ Le os CSVs gerados pelo `make medir` e pelo `make perfil` e gera, em resultados/
   - grafico_speedup.png      speedup por threads/processos, por N, com ideal e Amdahl
   - grafico_eficiencia.png   eficiencia por threads/processos, por N, com Amdahl
   - grafico_openmp_vs_mpi.png  as duas versoes lado a lado para o maior N
+  - grafico_tempo.png        tempo absoluto por threads/processos, com o baseline de cada N
+  - escalabilidade_fraca.csv e grafico_escalabilidade_fraca.png
+                             N = 1000*sqrt(P) (make fraca): tempo e eficiencia fraca T(1)/T(P)
 
 Definicoes:
   tempo de cada configuracao = mediana das 3 execucoes com descartada = nao
@@ -86,10 +89,10 @@ CORES = {500: "#9ecae1", 1000: "#4292c6", 2000: "#2171b5", 4000: "#08306b"}
 plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False})
 
 
-def marca_nucleos(ax):
+def marca_nucleos(ax, y=0.03):
     ax.axvline(NUCLEOS_FISICOS, color="#999", lw=0.8, ls=":")
-    # y em fracao da altura do eixo: fica no rodape, longe das curvas, em qualquer grafico
-    ax.text(NUCLEOS_FISICOS + 0.1, 0.03, "4 núcleos físicos", transform=ax.get_xaxis_transform(),
+    # y em fracao da altura do eixo (padrao: rodape, longe das curvas)
+    ax.text(NUCLEOS_FISICOS + 0.1, y, "4 núcleos físicos", transform=ax.get_xaxis_transform(),
             fontsize=8, color="#666", va="bottom")
 
 
@@ -147,6 +150,66 @@ fig.tight_layout()
 fig.savefig(os.path.join(RES, "grafico_openmp_vs_mpi.png"), dpi=150)
 plt.close(fig)
 
+# Tempo absoluto por threads/processos (escala log: N = 500 e N = 4000 diferem 60x)
+fig, (a, b) = plt.subplots(1, 2, figsize=(11, 4.5), sharey=True)
+for ax, tempos, titulo, rotulo in ((a, omp, "OpenMP", "Threads"), (b, mpi, "MPI", "Processos")):
+    for n in NS:
+        ax.plot(UNIDADES, [tempos[(n, p)] for p in UNIDADES], "o-", color=CORES[n], label=f"N = {n}")
+        ax.axhline(base[n], color=CORES[n], ls=":", lw=1)
+    ax.set_yscale("log")
+    ax.set_xticks(UNIDADES)
+    ax.set_xlabel(rotulo)
+    ax.set_title(titulo)
+    ax.grid(alpha=0.3, which="both")
+    marca_nucleos(ax)
+a.set_ylabel("Tempo do laço de passos (s, escala log)")
+a.plot([], [], "k:", lw=1, label="baseline (mesmo N)")
+fig.legend(*a.get_legend_handles_labels(), loc="lower center", ncol=5, fontsize=8, frameon=False)
+fig.suptitle("Tempo de execução (10 passos, mediana de 3)")
+fig.tight_layout(rect=(0, 0.06, 1, 1))  # deixa espaco para a legenda embaixo
+fig.savefig(os.path.join(RES, "grafico_tempo.png"), dpi=150)
+plt.close(fig)
+
+# Escalabilidade fraca: N = 1000*sqrt(P), trabalho constante por thread/processo
+fbase = medianas(ler("fraca_baseline_06_nbody.csv"))
+fomp = medianas(ler("fraca_openmp_06_nbody.csv"), "threads")
+fmpi = medianas(ler("fraca_mpi_06_nbody.csv"), "processos")
+fmpi_comm = medianas(ler("fraca_mpi_06_nbody.csv"), "processos", "comunicacao_s")
+FN = {p: n for (n, p) in fomp}  # P -> N usado
+with open(os.path.join(RES, "escalabilidade_fraca.csv"), "w", newline="") as f:
+    w = csv.writer(f)
+    w.writerow(["p", "n", "tempo_baseline_s", "tempo_openmp_s", "eficiencia_fraca_openmp",
+                "tempo_mpi_s", "comunicacao_mpi_s", "eficiencia_fraca_mpi"])
+    for p in UNIDADES:
+        n = FN[p]
+        w.writerow([p, n, f"{fbase[n]:.6f}", f"{fomp[(n, p)]:.6f}", f"{fomp[(FN[1], 1)] / fomp[(n, p)]:.3f}",
+                    f"{fmpi[(n, p)]:.6f}", f"{fmpi_comm[(n, p)]:.6f}", f"{fmpi[(FN[1], 1)] / fmpi[(n, p)]:.3f}"])
+
+fig, (a, b) = plt.subplots(1, 2, figsize=(11, 4.5))
+rot = [f"{p}\n(N={FN[p]})" for p in UNIDADES]
+a.plot(UNIDADES, [fbase[FN[p]] for p in UNIDADES], "^:", color="#636363", label="sequencial")
+a.plot(UNIDADES, [fomp[(FN[p], p)] for p in UNIDADES], "o-", color="#2171b5", label="OpenMP")
+a.plot(UNIDADES, [fmpi[(FN[p], p)] for p in UNIDADES], "s-", color="#e6550d", label="MPI")
+a.set_ylabel("Tempo (s)")
+a.set_title("Tempo com trabalho constante por unidade")
+b.plot(UNIDADES, [1] * 4, "k--", lw=1, label="ideal")
+b.plot(UNIDADES, [fomp[(FN[1], 1)] / fomp[(FN[p], p)] for p in UNIDADES], "o-", color="#2171b5", label="OpenMP")
+b.plot(UNIDADES, [fmpi[(FN[1], 1)] / fmpi[(FN[p], p)] for p in UNIDADES], "s-", color="#e6550d", label="MPI")
+b.set_ylim(0, 1.1)
+b.set_ylabel("Eficiência fraca = T(1) ÷ T(P)")
+b.set_title("Eficiência fraca")
+for ax in (a, b):
+    ax.set_xticks(UNIDADES)
+    ax.set_xticklabels(rot, fontsize=8)
+    ax.set_xlabel("Threads ou processos (P)")
+    ax.grid(alpha=0.3)
+    marca_nucleos(ax, y=0.55 if ax is a else 0.03)  # no painel do tempo as curvas ficam embaixo
+    ax.legend(loc="upper left" if ax is a else "lower left", fontsize=8)
+fig.suptitle("Escalabilidade fraca: N = 1000·√P (10 passos, mediana de 3)")
+fig.tight_layout()
+fig.savefig(os.path.join(RES, "grafico_escalabilidade_fraca.png"), dpi=150)
+plt.close(fig)
+
 # ---------- resumo no terminal ----------
 print("Fracao paralelizavel (perfil): " + ", ".join(f"N={n}: {P[n]:.5f}" for n in NS))
 print()
@@ -156,5 +219,9 @@ for n in NS:
         cel = " ".join(f"{base[n] / tempos[(n, p)]:>6.2f}x {base[n] / tempos[(n, p)] / p:>6.2f}" for p in UNIDADES)
         print(f"{n:>5} {versao:>7} {cel}")
 print()
-print("Gerados em resultados/: speedup_eficiencia.csv, grafico_speedup.png, "
-      "grafico_eficiencia.png, grafico_openmp_vs_mpi.png")
+print("Escalabilidade fraca (eficiencia T(1)/T(P)): " + ", ".join(
+    f"P={p}: OpenMP {fomp[(FN[1], 1)] / fomp[(FN[p], p)]:.3f} / MPI {fmpi[(FN[1], 1)] / fmpi[(FN[p], p)]:.3f}"
+    for p in UNIDADES))
+print()
+print("Gerados em resultados/: speedup_eficiencia.csv, escalabilidade_fraca.csv, grafico_tempo.png, "
+      "grafico_speedup.png, grafico_eficiencia.png, grafico_openmp_vs_mpi.png, grafico_escalabilidade_fraca.png")
