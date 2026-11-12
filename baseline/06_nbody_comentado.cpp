@@ -42,8 +42,7 @@ int main(int argc, char** argv) {
      *   argv[1] = "2000"          (texto! não é o número ainda)
      *   argv[2] = "10"            (texto! não é o número ainda)
      *
-     * char** argv é só "um array de strings" (você já manja
-     * ponteiro — char* é uma string, char** é um array delas). */
+     * char** argv é só "um array de strings" (char* é uma string, char** é um array delas). */
 
     /* atoi() converte TEXTO pra NÚMERO ("ascii to integer").
      * atoi("2000") devolve o inteiro 2000 de verdade.
