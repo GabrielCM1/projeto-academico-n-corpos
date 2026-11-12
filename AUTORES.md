@@ -22,10 +22,14 @@ As tarefas estão nas [issues do repositório](https://github.com/GabrielCM1/pro
 | Issue | Tarefa | Responsáveis |
 |---|---|---|
 | #1 | Paralelizar o código com OpenMP | Gabriel (argumentos e saída), Henrique (laço de forças), João Pedro (laço de atualização e escalonamento) |
-| #2 | Validar o resultado do OpenMP contra o baseline | João Pedro, Gabriel |
-| #3 | Medir os tempos da versão OpenMP | Gabriel |
-| #4 | Calcular speedup e eficiência e fazer os gráficos | a definir |
-| #5 | Relatório e apresentação do Marco 2 | Gabriel |
-| #6 | Versão MPI | a definir |
+| #2 | Validar o resultado do OpenMP contra o baseline | João Pedro, Gabriel, Henrique |
+| #3 | Medir os tempos (baseline, OpenMP e MPI na mesma sessão) | João Pedro, Gabriel |
+| #4 | Calcular speedup e eficiência e fazer os gráficos | Gabriel |
+| #5 | Relatório e apresentação do Marco 2 | Gabriel, Henrique |
+| #6 | Versão MPI | Gabriel (código, validação e primeira medição), João Pedro (medição padronizada) |
+| #7 | Perfilamento e estimativa de Amdahl | João Pedro |
+| #8 | Escalabilidade fraca | João Pedro |
+
+O commit do laço de forças do OpenMP (`a808a59`) tem o Henrique como autor. Ele estava sem acesso ao GitHub, então o commit foi enviado pelo João Pedro.
 
 Cada integrante responde pela própria frente, e todos revisam o trabalho dos outros para poder explicar qualquer parte do projeto.
